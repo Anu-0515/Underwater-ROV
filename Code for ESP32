@@ -1,0 +1,113 @@
+#define BLYNK_TEMPLATE_ID "TMPL3TsajwYn7"
+#define BLYNK_TEMPLATE_NAME "RC BOAT"
+#define BLYNK_AUTH_TOKEN "s7D7qU7h85Vgix2af5Oq9ysJysXBwUmI"
+
+// Comment this out to disable prints and save space
+#define BLYNK_PRINT Serial
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+
+char auth[] = BLYNK_AUTH_TOKEN;
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "IITRPR";
+char pass[] = "V#6qF?pyM!bQ$%NX";
+
+// Motor Control Pins
+int IN1 = 4;  // Motor A (Left) - Reverse
+int IN2 = 5;  // Motor A (Left) - Forward
+int IN3 = 12; // Motor B (Right) - Reverse
+int IN4 = 13; // Motor B (Right) - Forward
+
+// Define speed values (0 = off, 255 = max speed)
+#define FULL_SPEED 255
+#define REDUCED_SPEED 150 // Unused in V3/V4, but kept for reference
+
+// --- MODIFIED ---
+// All BLYNK_WRITE functions are updated to use analogWrite
+BLYNK_WRITE(V1) { //move forward
+  int state = param.asInt(); // state will be 1 (pressed) or 0 (released)
+  
+  // Set speed to FULL_SPEED when pressed, or 0 when released
+  analogWrite(IN2, state * FULL_SPEED); // Motor A Forward
+  analogWrite(IN4, state * FULL_SPEED); // Motor B Forward
+
+  // Make sure reverse pins are off
+  if (state == 1) {
+    analogWrite(IN1, 0);
+    analogWrite(IN3, 0);
+  }
+}
+
+// --- MODIFIED ---
+BLYNK_WRITE(V2) { //move backward
+  int state = param.asInt(); 
+
+  analogWrite(IN1, state * FULL_SPEED); // Motor A Reverse
+  analogWrite(IN3, state * FULL_SPEED); // Motor B Reverse
+
+  // Make sure forward pins are off
+  if (state == 1) {
+    analogWrite(IN2, 0);
+    analogWrite(IN4, 0);
+  }
+}
+
+// --- MODIFIED (New Request) ---
+BLYNK_WRITE(V3) { //turn left (Power Turn)
+  int state = param.asInt(); 
+  
+  // Motor A (Left - IN1/IN2) -> OFF
+  analogWrite(IN1, 0);
+  analogWrite(IN2, 0);
+  
+  // Motor B (Right - IN3/IN4) -> Forward at FULL speed
+  analogWrite(IN3, 0);
+  analogWrite(IN4, state * FULL_SPEED);
+}
+
+// --- MODIFIED (New Request) ---
+BLYNK_WRITE(V4) { //turn right (Power Turn)
+  int state = param.asInt(); 
+  
+  // Motor A (Left - IN1/IN2) -> Forward at FULL speed
+  analogWrite(IN1, 0);
+  analogWrite(IN2, state * FULL_SPEED);
+  
+  // Motor B (Right - IN3/IN4) -> OFF
+  analogWrite(IN3, 0);
+  analogWrite(IN4, 0);
+}
+
+
+void setup()
+{
+  // Debug console
+  Serial.begin(115200);
+
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  // You must set all pins to LOW at the start
+  // to prevent the robot from moving on boot
+  analogWrite(IN1, 0);
+  analogWrite(IN2, 0);
+  analogWrite(IN3, 0);
+  analogWrite(IN4, 0);
+
+
+  //Blynk.begin(auth, ssid, pass);
+  // You can also specify server:
+  Blynk.begin(auth, ssid, pass, "blynk.cloud", 8080);
+  //Blynk.begin(auth, ssid, pass, IPAddress(192,168,1,100), 8080);
+}
+
+void loop()
+{
+  Blynk.run();
+}
